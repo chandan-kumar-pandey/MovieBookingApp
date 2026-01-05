@@ -5,6 +5,10 @@ VisualStudioVersion = 17.14.36811.4 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MovieBookingApp", "MovieBookingApp\MovieBookingApp.csproj", "{6B8381CD-D33F-483D-937E-B927C0D0491D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{581A77AE-77D5-490D-8907-3EF2CC2A342D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{DB8F8404-707A-4DCF-9A45-BCF51359E78D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{6B8381CD-D33F-483D-937E-B927C0D0491D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B8381CD-D33F-483D-937E-B927C0D0491D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B8381CD-D33F-483D-937E-B927C0D0491D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{581A77AE-77D5-490D-8907-3EF2CC2A342D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{581A77AE-77D5-490D-8907-3EF2CC2A342D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{581A77AE-77D5-490D-8907-3EF2CC2A342D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{581A77AE-77D5-490D-8907-3EF2CC2A342D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB8F8404-707A-4DCF-9A45-BCF51359E78D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB8F8404-707A-4DCF-9A45-BCF51359E78D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB8F8404-707A-4DCF-9A45-BCF51359E78D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB8F8404-707A-4DCF-9A45-BCF51359E78D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
