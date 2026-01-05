@@ -25,7 +25,7 @@ namespace MovieBookingApp.Controllers
             _tokenService = tokenService;
         }
 
-        [HttpPost("student/register")]
+        [HttpPost("customer/register")]
         public IActionResult RegisterUserAction([FromBody] RegisterUserDTO dto)
         {
             var result = _authRepository.RegisterUser(dto,0);
@@ -45,5 +45,27 @@ namespace MovieBookingApp.Controllers
             return BadRequest(new { error = result.Message ?? "Registration failed"});
 
         }
+
+        [HttpPost("customer/Login")]
+        public IActionResult LoginUserAction([FromBody] LoginUserDTO dto)
+        {
+            var result = _authRepository.Login(dto.Email,dto.Password);
+
+            if (result.Status==1)
+            {
+                return Ok(new
+                {
+                    msg = !string.IsNullOrEmpty(result.Message) ? result.Message : "Login Successful!!",
+                    result
+                });
+            }
+
+            //throw new ArgumentException("User with this email or phone already exists.");
+
+            return Unauthorized("Invalid credentials.");
+
+        }
+
+
     }
 }

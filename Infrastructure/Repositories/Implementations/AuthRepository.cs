@@ -21,16 +21,18 @@ namespace Infrastructure.Repositories.Implementations
         private readonly AppDbContext _context;
 
         private readonly PasswordHashingService passwordHashing;
+        private readonly TokenService _tokenService;
         //private readonly IUserRepository _userRepository;
         private readonly ILogger<AuthRepository> _logger;
 
-        public AuthRepository(AppDbContext context, ILogger<AuthRepository> logger,  PasswordHashingService pH)
+        public AuthRepository(AppDbContext context, ILogger<AuthRepository> logger, PasswordHashingService pH, TokenService tokenService)
         {
             //_userRepository = userRepository;
             _context = context;
             _logger = logger;
             //_emailService = emailService;
             passwordHashing = pH;
+            _tokenService = tokenService;
         }
 
         public GeneralApiRespDTO RegisterUser(RegisterUserDTO userDTO, int role)
@@ -71,8 +73,8 @@ namespace Infrastructure.Repositories.Implementations
                 // Normalize to digits only to allow common separators and international '+' prefix
                 var digitsOnly = new string(userDTO.ContactNumber.Where(char.IsDigit).ToArray());
 
-                // Accept typical phone lengths (e.g., between 7 and 15 digits)
-                if (digitsOnly.Length !=10)
+  
+                if (digitsOnly.Length != 10)
                 {
                     _logger.LogWarning("Attempt to register with invalid phone length. Phone: {Phone}", userDTO.ContactNumber);
 
@@ -130,6 +132,49 @@ namespace Infrastructure.Repositories.Implementations
 
             var emailAttr = new EmailAddressAttribute();
             return emailAttr.IsValid(email);
+        }
+
+        public GeneralApiRespDTO? Login(string email, string password)
+        {
+            var user = _context.UserDetails.FirstOrDefault(u => u.Email == email);
+            if (user == null)
+            {
+                _logger.LogWarning("Login attempt failed. No user found with Email: {Email}", email);
+                return new GeneralApiRespDTO
+                {
+                    Status = -1,
+                    Message = "User not found.",
+                };
+            }
+            bool isPasswordValid = passwordHashing.VerifyPassword(password, user.PasswordHash);
+            if (!isPasswordValid)
+            {
+                _logger.LogWarning("Login attempt failed. Invalid password for Email: {Email}", email);
+                return new GeneralApiRespDTO
+                {
+                    Status = -1,
+                    Message = "Invalid Password or User-ID",
+                };
+            }
+            _logger.LogInformation("User logged in successfully. UserId: {UserId}", user.UserId);
+
+            var token = _tokenService.GenerateJwtToken(user);
+
+            return new GeneralApiRespDTO
+            {
+                Status = 1,
+                Message = "User LoggedIn Successfully!!",
+                Data = new
+                {
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    ContactNumber = user.ContactNumber,
+                    UserType = user.UserType,
+                    UserId = user.UserId,
+                    Token = token
+                }
+            };
         }
     }
 }
