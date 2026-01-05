@@ -22,9 +22,6 @@ public partial class UserDetails
     [Required, EmailAddress]
     public string Email { get; set; }
 
-    [Required, MaxLength(30)]
-    public string LoginId { get; set; }
-
     [Required]
     public string PasswordHash { get; set; }
 

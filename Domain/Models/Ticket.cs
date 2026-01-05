@@ -20,7 +20,10 @@ public partial class Ticket
     public Movie Movie { get; set; }
 
     [Required]
-    public int NumberOfTickets { get; set; }
+    public int UserId { get; set; }
+
+    [ForeignKey(nameof(UserId))]
+    public UserDetails User { get; set; }
 
     [Required, MaxLength(50)]
     public string SeatNumber { get; set; }

@@ -1,6 +1,8 @@
 
 using Domain.Data;
 using Domain.Models;
+using Infrastructure.Repositories.Implementations;
+using Infrastructure.Repositories.Interfaces;
 //using Infrastructure.Repositories.Implementations;
 //using Infrastructure.Repositories.Interfaces;
 using Infrastructure.Services;
@@ -8,9 +10,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
 using Serilog;
 using System.Security.Claims;
+using System.Text;
 
 namespace MovieBookingApp
 {
@@ -26,6 +28,9 @@ namespace MovieBookingApp
                 // Add services to the container.
                 builder.Services.AddScoped<TokenService>();
                 builder.Services.AddScoped<IJwtDecoderService, TokenService>();
+
+                builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+
                 builder.Services.AddSingleton<PasswordHashingService>();
 
                 builder.Services.AddControllers();

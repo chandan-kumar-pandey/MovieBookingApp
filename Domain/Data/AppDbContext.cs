@@ -28,10 +28,6 @@ public partial class AppDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
-        modelBuilder.Entity<UserDetails>()
-            .HasIndex(u => u.LoginId)
-            .IsUnique();
-
         modelBuilder.Entity<Movie>()
             .HasIndex(m => m.MovieName)
             .IsUnique();
