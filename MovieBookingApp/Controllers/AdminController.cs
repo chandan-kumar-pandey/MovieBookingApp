@@ -77,10 +77,7 @@ namespace MovieBookingApp.Controllers
         [HttpPut("update-ticket-status")]
         public async Task<IActionResult> UpdateStatus([FromBody] UpdateMovieDTO dto)
         {
-            // Ensure only admins can change ticket statuses
-            var role = User.FindFirst("UserType")?.Value;
-            if (role != "1") return Forbid();
-
+           
             var result = await _adminRepository.UpdateMovieTicketStatus(dto);
             return result.Status == 1 ? Ok(result) : BadRequest(result);
         }

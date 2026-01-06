@@ -1,4 +1,5 @@
 ﻿using Infrastructure.DTOs.CommonDTOs;
+using Infrastructure.DTOs.MovieDTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,5 +15,9 @@ namespace Infrastructure.Repositories.Interfaces
         Task<GeneralApiRespDTO> GetMoviesByName(string movieName);
 
         Task<GeneralApiRespDTO> GetMovieById(int movieId);
+
+        Task<GeneralApiRespDTO> BookMyShow(BookMovieDTO bookMovie);
+
+        Task<GeneralApiRespDTO> GetMyMovieTicket(int userId);
     }
 }

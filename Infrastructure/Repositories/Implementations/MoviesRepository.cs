@@ -1,6 +1,7 @@
 ﻿using Domain.Data;
 using Domain.Models;
 using Infrastructure.DTOs.CommonDTOs;
+using Infrastructure.DTOs.MovieDTOs;
 using Infrastructure.Repositories.Interfaces;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ namespace Infrastructure.Repositories.Implementations
 
             try
             {
-               
+
                 var movieList = await _context.Movies.ToListAsync();
 
                 if (movieList == null || !movieList.Any())
@@ -49,7 +50,7 @@ namespace Infrastructure.Repositories.Implementations
                 {
                     Status = 1,
                     Message = "Movies retrieved successfully.",
-                    Data = movieList 
+                    Data = movieList
                 };
             }
             catch (Exception ex)
@@ -140,6 +141,143 @@ namespace Infrastructure.Repositories.Implementations
                 {
                     Status = 0,
                     Message = "An internal error occurred."
+                };
+            }
+        }
+
+        public async Task<GeneralApiRespDTO> BookMyShow(BookMovieDTO bookMovie)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Validate and Map Seat Number
+                if (!int.TryParse(bookMovie.SeatNumber, out int seatInt) || seatInt < 1 || seatInt > 100)
+                {
+                    return new GeneralApiRespDTO { Status = 0, Message = "Invalid seat number. Use 1-100." };
+                }
+
+                string formattedSeat = MapSeatToRow(seatInt);
+
+                // 2. CHECK IF SEAT IS ALREADY BOOKED
+                // We check the Tickets table for this specific movie and seat combination
+                bool isSeatTaken = await _context.Tickets.AnyAsync(t =>
+                    t.MovieId == bookMovie.MovieId &&
+                    t.SeatNumber == formattedSeat);
+
+                if (isSeatTaken)
+                {
+                    return new GeneralApiRespDTO
+                    {
+                        Status = 0,
+                        Message = $"Seat {formattedSeat} is already booked. Please choose another seat."
+                    };
+                }
+
+                // 3. Fetch Movie and Check Inventory
+                var movie = await _context.Movies.FirstOrDefaultAsync(m => m.MovieId == bookMovie.MovieId);
+                if (movie == null)
+                {
+                    return new GeneralApiRespDTO { Status = 0, Message = "Movie not found." };
+                }
+
+                if (movie.TotalTickets <= 0)
+                {
+                    return new GeneralApiRespDTO { Status = 0, Message = "This movie is sold out." };
+                }
+
+                // 4. Create Ticket Record
+                var newTicket = new Ticket
+                {
+                    MovieId = bookMovie.MovieId,
+                    UserId = bookMovie.userId,
+                    SeatNumber = formattedSeat
+                };
+
+                _context.Tickets.Add(newTicket);
+
+                // 5. Update Movie Inventory
+                movie.TotalTickets -= 1;
+                if (movie.TotalTickets == 0)
+                {
+                    movie.TicketStatus = "SOLD OUT";
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = $"Success! Seat {formattedSeat} reserved.",
+                    Data = newTicket
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Booking failed");
+                return new GeneralApiRespDTO { Status = 0, Message = "An error occurred." };
+            }
+        }
+
+        private string MapSeatToRow(int seatNumber)
+        {
+            char row = seatNumber switch
+            {
+                <= 20 => 'A',
+                <= 40 => 'B',
+                <= 60 => 'C',
+                <= 80 => 'D',
+                _ => 'E'
+            };
+            return $"{row}{seatNumber}";
+        }
+
+        public async Task<GeneralApiRespDTO> GetMyMovieTicket(int userId)
+        {
+            try
+            {
+                // Left join tickets with movies to include movie name (if available)
+                var ticketsWithMovie = await (
+                    from t in _context.Tickets
+                    where t.UserId == userId
+                    join m in _context.Movies on t.MovieId equals m.MovieId into movieGroup
+                    from m in movieGroup.DefaultIfEmpty()
+                    select new
+                    {
+                        // Preserve ticket fields; include MovieName from joined movie (may be null)
+                        TicketId = EF.Property<int?>(t, "TicketId"), // safe access if TicketId exists; nullable fallback
+                        t.MovieId,
+                        t.UserId,
+                        t.SeatNumber,
+                        MovieName = m != null ? m.MovieName : null
+                    }
+                ).ToListAsync();
+
+                if (ticketsWithMovie == null || !ticketsWithMovie.Any())
+                {
+                    return new GeneralApiRespDTO
+                    {
+                        Status = 1,
+                        Message = "No tickets found for this user.",
+                        Data = new List<object>()
+                    };
+                }
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = "Tickets retrieved successfully.",
+                    Data = ticketsWithMovie
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching tickets for UserId: {UserId}", userId);
+                return new GeneralApiRespDTO
+                {
+                    Status = 0,
+                    Message = "An error occurred while retrieving tickets."
                 };
             }
         }
