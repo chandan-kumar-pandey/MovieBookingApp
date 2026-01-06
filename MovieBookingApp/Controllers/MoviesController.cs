@@ -85,7 +85,7 @@ namespace MovieBookingApp.Controllers
 
         }
 
-        [Authorize(Roles ="Customer")] // Only logged-in users can book
+        [Authorize(Roles = "Customer")] // Only logged-in users can book
         [HttpPost("book")]
         public async Task<IActionResult> BookTicket([FromBody] BookMovieDTO bookMovieDto)
         {
@@ -110,7 +110,7 @@ namespace MovieBookingApp.Controllers
             return BadRequest(result);
         }
 
-        [Authorize(Roles ="Customer")]
+        [Authorize(Roles = "Customer")]
         [HttpGet("tickets/{userId}")]
         public async Task<IActionResult> FetchTickets(int userId)
         {
@@ -132,6 +132,27 @@ namespace MovieBookingApp.Controllers
             }
 
             return BadRequest(result);
+        }
+
+        [Authorize(Roles = "Customer")]
+        [HttpGet("seats-matrix/{movieId}")]
+        public async Task<IActionResult> GetSeatsMatrix(int movieId)
+        {
+            var result = await _movieRepository.GetMovieSeatMatrix(movieId);
+            if (result is null)
+            {
+                return BadRequest(new { error = "Fetching Seats Matrix failed." });
+            }
+            if (result.Status > 0)
+            {
+                return Ok(new
+                {
+                    msg = "Seats Matrix Fetched Successfully!!",
+                    result.Data,
+                    result.Status
+                });
+            }
+            return BadRequest(new { error = result.Message ?? "Fetching Seats Matrix failed" });
         }
     }
 }

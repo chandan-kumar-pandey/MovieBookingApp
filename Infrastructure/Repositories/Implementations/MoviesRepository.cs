@@ -147,59 +147,75 @@ namespace Infrastructure.Repositories.Implementations
 
         public async Task<GeneralApiRespDTO> BookMyShow(BookMovieDTO bookMovie)
         {
+            // Use a transaction to ensure all seats are booked or none are (Atomic operation)
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Validate and Map Seat Number
-                if (!int.TryParse(bookMovie.SeatNumber, out int seatInt) || seatInt < 1 || seatInt > 100)
+                // 1. Basic Validation
+                if (bookMovie.SeatNumbers == null || bookMovie.SeatNumbers.Length == 0)
                 {
-                    return new GeneralApiRespDTO { Status = 0, Message = "Invalid seat number. Use 1-100." };
+                    return new GeneralApiRespDTO { Status = 0, Message = "No seats selected." };
                 }
 
-                string formattedSeat = MapSeatToRow(seatInt);
-
-                // 2. CHECK IF SEAT IS ALREADY BOOKED
-                // We check the Tickets table for this specific movie and seat combination
-                bool isSeatTaken = await _context.Tickets.AnyAsync(t =>
-                    t.MovieId == bookMovie.MovieId &&
-                    t.SeatNumber == formattedSeat);
-
-                if (isSeatTaken)
-                {
-                    return new GeneralApiRespDTO
-                    {
-                        Status = 0,
-                        Message = $"Seat {formattedSeat} is already booked. Please choose another seat."
-                    };
-                }
-
-                // 3. Fetch Movie and Check Inventory
+                // 2. Fetch Movie and Check Inventory
                 var movie = await _context.Movies.FirstOrDefaultAsync(m => m.MovieId == bookMovie.MovieId);
                 if (movie == null)
                 {
                     return new GeneralApiRespDTO { Status = 0, Message = "Movie not found." };
                 }
 
-                if (movie.TotalTickets <= 0)
+                int requestedCount = bookMovie.SeatNumbers.Length;
+
+                if (movie.TotalTickets < requestedCount)
                 {
-                    return new GeneralApiRespDTO { Status = 0, Message = "This movie is sold out." };
+                    return new GeneralApiRespDTO
+                    {
+                        Status = 0,
+                        Message = $"Not enough tickets available. Remaining: {movie.TotalTickets}"
+                    };
                 }
 
-                // 4. Create Ticket Record
-                var newTicket = new Ticket
-                {
-                    MovieId = bookMovie.MovieId,
-                    UserId = bookMovie.userId,
-                    SeatNumber = formattedSeat
-                };
+                // 3. CHECK FOR DUPLICATES (Already Booked)
+                // Check if ANY of the requested seats are already in the database for this movie
+                var alreadyBookedSeats = await _context.Tickets
+                    .Where(t => t.MovieId == bookMovie.MovieId && bookMovie.SeatNumbers.Contains(t.SeatNumber))
+                    .Select(t => t.SeatNumber)
+                    .ToListAsync();
 
-                _context.Tickets.Add(newTicket);
-
-                // 5. Update Movie Inventory
-                movie.TotalTickets -= 1;
-                if (movie.TotalTickets == 0)
+                if (alreadyBookedSeats.Any())
                 {
+                    return new GeneralApiRespDTO
+                    {
+                        Status = 0,
+                        Message = $"The following seats are already taken: {string.Join(", ", alreadyBookedSeats)}"
+                    };
+                }
+
+                // 4. Create Ticket Records for EACH seat
+                var ticketsToCreate = new List<Ticket>();
+                foreach (var seat in bookMovie.SeatNumbers)
+                {
+                    ticketsToCreate.Add(new Ticket
+                    {
+                        MovieId = bookMovie.MovieId,
+                        UserId = bookMovie.userId,
+                        SeatNumber = seat // The string from Angular (e.g., "A1")
+                    });
+                }
+
+                _context.Tickets.AddRange(ticketsToCreate);
+
+                // 5. Update Movie Inventory by the total count
+                movie.TotalTickets -= requestedCount;
+
+                if (movie.TotalTickets <= 0)
+                {
+                    movie.TotalTickets = 0;
                     movie.TicketStatus = "SOLD OUT";
+                }
+                else if (movie.TotalTickets < 10)
+                {
+                    movie.TicketStatus = "BOOK ASAP";
                 }
 
                 await _context.SaveChangesAsync();
@@ -208,15 +224,15 @@ namespace Infrastructure.Repositories.Implementations
                 return new GeneralApiRespDTO
                 {
                     Status = 1,
-                    Message = $"Success! Seat {formattedSeat} reserved.",
-                    Data = newTicket
+                    Message = $"Success! {requestedCount} seats reserved: {string.Join(", ", bookMovie.SeatNumbers)}",
+                    Data = ticketsToCreate
                 };
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "Booking failed");
-                return new GeneralApiRespDTO { Status = 0, Message = "An error occurred." };
+                _logger.LogError(ex, "Booking failed for MovieId: {MovieId}", bookMovie.MovieId);
+                return new GeneralApiRespDTO { Status = 0, Message = "An internal error occurred." };
             }
         }
 
@@ -279,6 +295,52 @@ namespace Infrastructure.Repositories.Implementations
                     Status = 0,
                     Message = "An error occurred while retrieving tickets."
                 };
+            }
+        }
+
+        public async Task<GeneralApiRespDTO> GetMovieSeatMatrix(int movieId)
+        {
+            try
+            {
+                var movie = await _context.Movies.FirstOrDefaultAsync(m => m.MovieId == movieId);
+                if (movie == null) return new GeneralApiRespDTO { Status = 0, Message = "Movie not found" };
+
+                var bookedSeats = await _context.Tickets
+                    .Where(t => t.MovieId == movieId)
+                    .Select(t => t.SeatNumber)
+                    .ToListAsync();
+
+                int totalCapacity = movie.TotalTickets + bookedSeats.Count;
+
+                // Generate names like A1, A2... B21, B22...
+                var allSeats = new List<string>();
+                for (int i = 1; i <= totalCapacity; i++)
+                {
+                    // Calculate Row Letter: (i-1)/20. 0=A, 1=B, 2=C...
+                    char rowLetter = (char)('A' + (i - 1) / 20);
+                    allSeats.Add($"{rowLetter}{i}");
+                }
+
+                var availableSeats = allSeats.Except(bookedSeats).ToList();
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = "Seat matrix retrieved successfully.",
+                    Data = new
+                    {
+                        MovieId = movie.MovieId,
+                        MovieName = movie.MovieName,
+                        OriginalSeatNumbers = allSeats,
+                        BookedSeatNumbers = bookedSeats,
+                        AvailableSeatNumbers = availableSeats
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching seat matrix");
+                return new GeneralApiRespDTO { Status = 0, Message = "An error occurred." };
             }
         }
     }

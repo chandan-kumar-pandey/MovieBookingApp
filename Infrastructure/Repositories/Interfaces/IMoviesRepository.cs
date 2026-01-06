@@ -19,5 +19,7 @@ namespace Infrastructure.Repositories.Interfaces
         Task<GeneralApiRespDTO> BookMyShow(BookMovieDTO bookMovie);
 
         Task<GeneralApiRespDTO> GetMyMovieTicket(int userId);
+
+        Task<GeneralApiRespDTO> GetMovieSeatMatrix(int movieId);
     }
 }

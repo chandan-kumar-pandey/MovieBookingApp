@@ -12,7 +12,7 @@ namespace Infrastructure.DTOs.MovieDTOs
 
         public int userId { get; set; }
 
-        public string SeatNumber { get; set; }
+        public string[] SeatNumbers { get; set; }
 
     }
 }

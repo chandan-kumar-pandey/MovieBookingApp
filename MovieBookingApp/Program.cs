@@ -118,6 +118,20 @@ namespace MovieBookingApp
 
                 builder.Host.UseSerilog();
 
+                builder.Services.AddCors(options =>
+                {
+                    options.AddPolicy("AllowAngularApp", policy =>
+                    {
+                        policy.WithOrigins("http://localhost:4200")
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                        //policy.WithOrigins("https://front-online-exam-portal.netlify.app")
+                        //    .AllowAnyHeader()
+                        //    .AllowAnyMethod();
+                    });
+                });
+
+
                 var app = builder.Build();
 
                 // Configure the HTTP request pipeline.
@@ -126,6 +140,9 @@ namespace MovieBookingApp
                     app.UseSwagger();
                     app.UseSwaggerUI();
                 }
+
+                app.UseRouting();
+                app.UseCors("AllowAngularApp");
 
                 app.UseHttpsRedirection();
 
