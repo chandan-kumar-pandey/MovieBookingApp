@@ -11,5 +11,9 @@ namespace Infrastructure.Repositories.Interfaces
     public interface IAdminRepository
     {
         Task<GeneralApiRespDTO> AddMovie(AddMovieDTO movie);
+
+        Task<GeneralApiRespDTO> RemoveMovie(int movieId);
+
+        Task<GeneralApiRespDTO> UpdateMovieTicketStatus(UpdateMovieDTO movie);
     }
 }

@@ -5,6 +5,7 @@ using Infrastructure.DTOs.AdminDTOs;
 using Infrastructure.DTOs.CommonDTOs;
 using Infrastructure.Repositories.Interfaces;
 using Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -91,6 +92,102 @@ namespace Infrastructure.Repositories.Implementations
                 {
                     Status = 0,
                     Message = "An error occurred while processing your request."
+                };
+            }
+        }
+
+        public async Task<GeneralApiRespDTO> RemoveMovie(int movieId)
+        {
+            // Start a transaction to ensure both deletions succeed or both fail
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // 1. Find the movie
+                var movie = await _context.Movies.FirstOrDefaultAsync(m => m.MovieId == movieId);
+
+                if (movie == null)
+                {
+                    return new GeneralApiRespDTO { Status = 0, Message = "Movie not found." };
+                }
+
+                // 2. Find and Remove all related Tickets
+                var relatedTickets = _context.Tickets.Where(t => t.MovieId == movieId);
+                if (await relatedTickets.AnyAsync())
+                {
+                    _context.Tickets.RemoveRange(relatedTickets);
+                }
+
+                // 3. Remove the movie
+                _context.Movies.Remove(movie);
+
+                // 4. Save changes and commit transaction
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = "Movie and all associated tickets removed successfully.",
+                    Id = movieId
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(); // Undo changes if something goes wrong
+                _logger.LogError(ex, "Error deleting movie and tickets for ID: {Id}", movieId);
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 0,
+                    Message = "An error occurred during deletion. No data was removed."
+                };
+            }
+        }
+
+        public async Task<GeneralApiRespDTO> UpdateMovieTicketStatus(UpdateMovieDTO mov)
+        {
+            try
+            {
+                // 1. Validate the input
+                if (mov == null || mov.MovieId <= 0)
+                {
+                    return new GeneralApiRespDTO { Status = 0, Message = "Invalid movie data provided." };
+                }
+
+                // 2. Find the movie in the database
+                var movie = await _context.Movies.FirstOrDefaultAsync(m => m.MovieId == mov.MovieId);
+
+                if (movie == null)
+                {
+                    return new GeneralApiRespDTO
+                    {
+                        Status = 0,
+                        Message = $"Movie with ID {mov.MovieId} not found."
+                    };
+                }
+
+              
+                movie.TicketStatus = mov.TicketStatus;
+
+                // 4. Save the changes
+                _context.Movies.Update(movie);
+                await _context.SaveChangesAsync();
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = "Ticket status updated successfully.",
+                    Data = movie
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating ticket status for Movie ID: {Id}", mov.MovieId);
+                return new GeneralApiRespDTO
+                {
+                    Status = 0,
+                    Message = "An error occurred while updating ticket status."
                 };
             }
         }

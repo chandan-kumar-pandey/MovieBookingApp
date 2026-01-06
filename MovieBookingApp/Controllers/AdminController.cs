@@ -1,6 +1,7 @@
 ﻿using Domain.Models;
-using Infrastructure.DTOs.AuthDTOs;
 using Infrastructure.DTOs.AdminDTOs;
+using Infrastructure.DTOs.AuthDTOs;
+using Infrastructure.Repositories.Implementations;
 using Infrastructure.Repositories.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -55,6 +56,33 @@ namespace MovieBookingApp.Controllers
             }
 
             return BadRequest(new { error = result.Message ?? "Adding Movie failed" });
+        }
+
+        [Authorize(Roles ="Admin")]
+        [HttpDelete("delete/{movieId}")]
+        public async Task<IActionResult> DeleteMovie(int movieId)
+        {
+            // Check if user is Admin (UserType == 1)
+            var userTypeClaim = User.FindFirst("UserType")?.Value;
+            if (userTypeClaim != "1")
+            {
+                return Forbid("Only administrators can delete movies.");
+            }
+
+            var result = await _adminRepository.RemoveMovie(movieId);
+            return result.Status == 1 ? Ok(result) : BadRequest(result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("update-ticket-status")]
+        public async Task<IActionResult> UpdateStatus([FromBody] UpdateMovieDTO dto)
+        {
+            // Ensure only admins can change ticket statuses
+            var role = User.FindFirst("UserType")?.Value;
+            if (role != "1") return Forbid();
+
+            var result = await _adminRepository.UpdateMovieTicketStatus(dto);
+            return result.Status == 1 ? Ok(result) : BadRequest(result);
         }
     }
 }
