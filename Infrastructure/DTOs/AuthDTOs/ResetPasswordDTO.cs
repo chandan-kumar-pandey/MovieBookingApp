@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.DTOs.AuthDTOs
 {
-    public class LoginUserDTO
+    public class ResetPasswordDTO
     {
-        public string LoginId { get; set; }
-        public string Password { get; set; }
+        public int UserId { get; set; }
+        public string NewPassword { get; set; }
     }
 }

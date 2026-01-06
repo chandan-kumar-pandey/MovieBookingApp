@@ -14,6 +14,8 @@ namespace Infrastructure.DTOs.AuthDTOs
 
         public string LastName { get; set; }
         public string Email { get; set; }
+
+        public string UserName { get; set; }
         public string PasswordHash { get; set; }
 
         public string? ContactNumber { get; set; }

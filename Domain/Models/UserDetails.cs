@@ -14,6 +14,9 @@ public partial class UserDetails
     public int UserId { get; set; }
 
     [Required, MaxLength(50)]
+    public string LoginID { get; set; }
+
+    [Required, MaxLength(50)]
     public string FirstName { get; set; }
 
     [Required, MaxLength(50)]

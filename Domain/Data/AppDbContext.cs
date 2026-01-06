@@ -25,6 +25,10 @@ public partial class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<UserDetails>()
+        .HasIndex(u => u.LoginID)
+        .IsUnique();
+
+        modelBuilder.Entity<UserDetails>()
             .HasIndex(u => u.Email)
             .IsUnique();
 

@@ -39,17 +39,18 @@ namespace Infrastructure.Repositories.Implementations
         {
 
             bool emailExists = _context.UserDetails.Any(u => u.Email == userDTO.Email);
+            bool loginIdExists = _context.UserDetails.Any(u => u.LoginID == userDTO.UserName);
             bool phoneExists = _context.UserDetails.Any(u => u.ContactNumber == userDTO.ContactNumber);
 
 
-            if (emailExists || phoneExists)
+            if (emailExists || phoneExists || loginIdExists)
             {
-                _logger.LogWarning("Attempt to register with existing Email or Phone. Email: {Email}, Phone: {Phone}", userDTO.Email, userDTO.ContactNumber);
+                _logger.LogWarning("Attempt to register with existing Email/Username or Phone. Email: {Email}, Phone: {Phone}", userDTO.Email, userDTO.ContactNumber);
 
                 var respBody = new GeneralApiRespDTO
                 {
                     Status = 0,
-                    Message = "Email or Phone number already exists."
+                    Message = "Email/Username or Phone number already exists."
                 };
 
                 return respBody;
@@ -91,6 +92,7 @@ namespace Infrastructure.Repositories.Implementations
                 FirstName = userDTO.FirstName,
                 LastName = userDTO.LastName,
                 Email = userDTO.Email,
+                LoginID = userDTO.UserName,
                 PasswordHash = passwordHashing.HashPassword(userDTO.PasswordHash),
                 UserType = role,
                 ContactNumber = userDTO.ContactNumber,
@@ -134,12 +136,12 @@ namespace Infrastructure.Repositories.Implementations
             return emailAttr.IsValid(email);
         }
 
-        public GeneralApiRespDTO? Login(string email, string password)
+        public GeneralApiRespDTO? Login(string loginId, string password)
         {
-            var user = _context.UserDetails.FirstOrDefault(u => u.Email == email);
+            var user = _context.UserDetails.FirstOrDefault(u => u.LoginID == loginId);
             if (user == null)
             {
-                _logger.LogWarning("Login attempt failed. No user found with Email: {Email}", email);
+                _logger.LogWarning("Login attempt failed. No user found with Email: {Email}", loginId);
                 return new GeneralApiRespDTO
                 {
                     Status = -1,
@@ -149,7 +151,7 @@ namespace Infrastructure.Repositories.Implementations
             bool isPasswordValid = passwordHashing.VerifyPassword(password, user.PasswordHash);
             if (!isPasswordValid)
             {
-                _logger.LogWarning("Login attempt failed. Invalid password for Email: {Email}", email);
+                _logger.LogWarning("Login attempt failed. Invalid password for Email: {Email}", loginId);
                 return new GeneralApiRespDTO
                 {
                     Status = -1,
@@ -169,12 +171,66 @@ namespace Infrastructure.Repositories.Implementations
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Email = user.Email,
+                    LoginID = user.LoginID,
                     ContactNumber = user.ContactNumber,
                     UserType = user.UserType,
                     UserId = user.UserId,
                     Token = token
                 }
             };
+        }
+
+        public string ForgotPassword(string username)
+        {
+            var user = _context.UserDetails.FirstOrDefault(u => u.LoginID == username);
+
+            if (user == null)
+            {
+                return "User not found.";
+            }
+
+            // Logic: Usually, you'd generate a reset token or return a security hint.
+            // For this example, we return a success message.
+            return $"Password reset instructions sent to {user.Email}";
+        }
+
+        public GeneralApiRespDTO ResetPassword(int userId, string newPassword)
+        {
+            var user = _context.UserDetails.FirstOrDefault(u => u.UserId == userId);
+
+            if (user == null)
+            {
+                return new GeneralApiRespDTO
+                {
+                    Status = 0,
+                    Message = "User Not Found"
+                };
+            }
+
+            try
+            {
+              
+                user.PasswordHash = passwordHashing.HashPassword(newPassword);
+                _context.UserDetails.Update(user);
+                _context.SaveChanges();
+
+                return new GeneralApiRespDTO
+                {
+                    Status = 1,
+                    Message = "Password updated successfully!"
+                };
+            }
+            catch (Exception ex)
+            {
+                // Handle database errors (e.g., connection issues)
+                return new GeneralApiRespDTO
+                {
+                    Status = 0,
+                    Message = "An error occurred while updating the password."
+                };
+            }
+
+
         }
     }
 }

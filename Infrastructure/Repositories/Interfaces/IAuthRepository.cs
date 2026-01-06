@@ -14,7 +14,11 @@ namespace Infrastructure.Repositories.Interfaces
     {
        
         GeneralApiRespDTO RegisterUser(RegisterUserDTO userDTO, int userType);
-        GeneralApiRespDTO Login(string email, string password);
+        GeneralApiRespDTO Login(string loginId, string password);
+
+        string ForgotPassword(string username);
+
+        GeneralApiRespDTO ResetPassword(int userId,  string newPassword);
         //Task<ResendOtpResponseDTO> RequestOtpForgotPassword(ForgotPasswordRequestDTO request);
         //Task<int> ResetPassword(ResetPasswordRequestDto request);
 
