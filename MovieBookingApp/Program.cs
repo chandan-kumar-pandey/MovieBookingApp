@@ -31,6 +31,7 @@ namespace MovieBookingApp
 
                 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
                 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
+                builder.Services.AddScoped<IMoviesRepository, MoviesRepository>();
 
                 builder.Services.AddSingleton<PasswordHashingService>();
 
