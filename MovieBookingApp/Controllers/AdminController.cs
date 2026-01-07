@@ -63,11 +63,11 @@ namespace MovieBookingApp.Controllers
         public async Task<IActionResult> DeleteMovie(int movieId)
         {
             // Check if user is Admin (UserType == 1)
-            var userTypeClaim = User.FindFirst("UserType")?.Value;
-            if (userTypeClaim != "1")
-            {
-                return Forbid("Only administrators can delete movies.");
-            }
+            //var userTypeClaim = User.FindFirst("UserType")?.Value;
+            //if (userTypeClaim != "1")
+            //{
+            //    return Forbid("Only administrators can delete movies.");
+            //}
 
             var result = await _adminRepository.RemoveMovie(movieId);
             return result.Status == 1 ? Ok(result) : BadRequest(result);
