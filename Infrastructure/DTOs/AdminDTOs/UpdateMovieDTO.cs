@@ -8,6 +8,7 @@ namespace Infrastructure.DTOs.AdminDTOs
 {
     public class UpdateMovieDTO
     {
+        //Testing git ignore
         public int MovieId { get; set; }
         public string TicketStatus { get; set; }
     }
